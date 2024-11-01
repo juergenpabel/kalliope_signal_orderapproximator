@@ -107,8 +107,8 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 		for signal2user_offset in range(0, len(signal2user_word_matches)):
 			if signal2user_word_matches[signal2user_offset] is False:
 				if isinstance(signal_order_words[signal2user_offset], OrderVariable) is False:
-					print(f"variadic order '{signal_order}' + {signal2user_word_matches} => '{user_order}' fails at word {signal2user_offset} " \
-					      f"('{signal_order_words[signal2user_offset]}')")
+					logger.debug(f"variadic order '{signal_order}' + {signal2user_word_matches} => '{user_order}' fails at word " \
+					             f"{signal2user_offset} ('{signal_order_words[signal2user_offset]}')")
 					return False
 		return True
 
@@ -123,7 +123,7 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 				if patched_synapse_order_tuple is not None:
 					logger.debug(f"[signal:orderapproximator] evaluating variables for variadic order: {patched_synapse_order_tuple.user_order}")
 					if self.evaluate_variadic_order_variables(patched_synapse_order_tuple) is True:
-						logger.info(f"[signal:orderapproximator] Matched (variadic) user order '{patched_synapse_order_tuple.user_order}' to " \
+						logger.info(f"[signal:orderapproximator] Matched (variadic) user order '{synapse_order_tuple.user_order}' to " \
 						    f"'{patched_synapse_order_tuple.matched_order}' (word similarity>={self.variadic_order_minimum_word_similarity:.2f})")
 						list_order_matches.append(patched_synapse_order_tuple)
 		return list_order_matches
