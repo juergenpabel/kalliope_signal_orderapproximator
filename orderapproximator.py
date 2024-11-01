@@ -68,14 +68,14 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 								word_score = difflib_SequenceMatcher(None, word_user, word_signal).ratio()
 								if word_score >= self.variadic_order_minimum_word_similarity:
 									user_order_words[user2signal_offset] = signal_order_words[signal_word_offset]
-				elif user2signal_offset == 0:
+				elif user2signal_offset == 0 and len(user2signal_word_matches) > 1:
 					if user2signal_word_matches[1] is not False:
 						signal_word_offset = user2signal_word_matches[1]
 						if isinstance(signal_order_words[signal_word_offset], OrderVariable) is False:
 							word_score = difflib_SequenceMatcher(None, user_order_words[0], signal_order_words[signal_word_offset-1]).ratio()
 							if word_score >= self.variadic_order_minimum_word_similarity:
 								user_order_words[0] = signal_order_words[signal_word_offset-1]
-				elif user2signal_offset == len(user2signal_word_matches)-1:
+				elif user2signal_offset == len(user2signal_word_matches)-1 and len(user2signal_word_matches) > 1:
 					if user2signal_word_matches[-2] is not False:
 						signal_word_offset = user2signal_word_matches[-2]
 						if isinstance(signal_order_words[signal_word_offset], OrderVariable) is False:
