@@ -28,8 +28,8 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 		self.OrderAnalyser_get_list_match_synapse = OrderAnalyser.get_list_match_synapse
 		OrderAnalyser.get_list_match_synapse = Orderapproximator.get_list_match_synapse
 
-		self.minimum_const_order_similarity = 0.8
-		self.minimum_word_similarity = 0.5
+		self.const_order_minimum_sentence_similarity = 0.8
+		self.variadic_order_minimum_word_similarity = 0.5
 
 
 	def run(self):
@@ -63,17 +63,25 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 						signal_word_post = signal_order_words[signal_word_offset+1]
 						if isinstance(signal_word_pre, OrderVariable) is False and isinstance(signal_word_post, OrderVariable) is False:
 							if isinstance(signal_order_words[signal_word_offset], OrderVariable) is False:
-								user_order_words[user2signal_offset] = signal_order_words[signal_word_offset]
+								word_user = user_order_words[user2signal_offset]
+								word_signal = signal_order_words[signal_word_offset]
+								word_score = difflib_SequenceMatcher(None, word_user, word_signal).ratio()
+								if word_score >= self.variadic_order_minimum_word_similarity:
+									user_order_words[user2signal_offset] = signal_order_words[signal_word_offset]
 				elif user2signal_offset == 0:
 					if user2signal_word_matches[1] is not False:
 						signal_word_offset = user2signal_word_matches[1]
 						if isinstance(signal_order_words[signal_word_offset], OrderVariable) is False:
-							user_order_words[0] = signal_order_words[signal_word_offset-1]
+							word_score = difflib_SequenceMatcher(None, user_order_words[0], signal_order_words[signal_word_offset-1]).ratio()
+							if word_score >= self.variadic_order_minimum_word_similarity:
+								user_order_words[0] = signal_order_words[signal_word_offset-1]
 				elif user2signal_offset == len(user2signal_word_matches)-1:
 					if user2signal_word_matches[-2] is not False:
 						signal_word_offset = user2signal_word_matches[-2]
 						if isinstance(signal_order_words[signal_word_offset], OrderVariable) is False:
-							user_order_words[-1] = signal_order_words[signal_word_offset+1]
+							word_score = difflib_SequenceMatcher(None, user_order_words[-1], signal_order_words[signal_word_offset+1]).ratio()
+							if word_score >= self.variadic_order_minimum_word_similarity:
+								user_order_words[-1] = signal_order_words[signal_word_offset+1]
 		patched_user_order = ' '.join(user_order_words)
 		if user_order != patched_user_order:
 			logger.debug(f"[signal:orderapproximator] patched const words in variadic user order: '{user_order}' => '{patched_user_order}'")
@@ -115,8 +123,8 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 				if patched_synapse_order_tuple is not None:
 					logger.debug(f"[signal:orderapproximator] evaluating variables for variadic order: {patched_synapse_order_tuple.user_order}")
 					if self.evaluate_variadic_order_variables(patched_synapse_order_tuple) is True:
-						logger.debug(f"[signal:orderapproximator] variables successfully evaluated for variadic order: " \
-						             f"{patched_synapse_order_tuple.user_order}")
+						logger.info(f"[signal:orderapproximator] Matched (variadic) user order '{patched_synapse_order_tuple.user_order}' to " \
+						    f"'{patched_synapse_order_tuple.matched_order}' (word similarity>={self.variadic_order_minimum_word_similarity:.2f})")
 						list_order_matches.append(patched_synapse_order_tuple)
 		return list_order_matches
 
@@ -129,11 +137,11 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 			if synapse_score not in dict_synapse_scores:
 				dict_synapse_scores[synapse_score] = []
 			dict_synapse_scores[synapse_score].append(synapse_order_tuple)
-		for synapse_score in [score for score in sorted(dict_synapse_scores.keys(), reverse=True) if score >= self.minimum_const_order_similarity]:
+		for synapse_score in [score for score in sorted(dict_synapse_scores.keys(), reverse=True) if score >= self.const_order_minimum_sentence_similarity]:
 			for synapse_tuple in dict_synapse_scores[synapse_score]:
 				if re_search(r'{{\s*\w+\s*}}', synapse_tuple.matched_order) is None:
 					logger.info(f"[signal:orderapproximator] Matched user order '{synapse_tuple.user_order}' to '{synapse_tuple.matched_order}' " \
-					            f"with similarity score={synapse_score:.2f} (min={self.minimum_const_order_similarity:.2f})")
+					            f"with similarity score={synapse_score:.2f} (min={self.const_order_minimum_sentence_similarity:.2f})")
 					list_approximately_matching_synapses.append(synapse_tuple)
 		return list_approximately_matching_synapses
 
@@ -146,8 +154,8 @@ class Orderapproximator(SignalModule, NotificationManager, threading_Thread):
 				synapse_order_tuples.append(synapse_order_tuple(synapse=synapse, matched_order=signal_order, user_order=user_order))
 		list_approximately_matching_synapses = self.match_const_order_synapses(user_order, synapse_order_tuples)
 		if len(list_approximately_matching_synapses) == 0:
-			logger.info(f"[signal:orderapproximator] no const order matched with order similarity score>={self.minimum_const_order_similarity}, " \
-			            f"trying variadic matching...")
+			logger.debug(f"[signal:orderapproximator] no const order matched with order similarity score>={self.const_order_minimum_sentence_similarity}, " \
+			             f"trying variadic matching...")
 			list_approximately_matching_synapses = self.match_variadic_order_synapses(user_order, synapse_order_tuples)
 		return list_approximately_matching_synapses
 
